@@ -107,10 +107,13 @@ export const getImageTranslate = (
 export const getImageDimensionsByTranslate = (
   translate: Position,
   screen: Dimensions
-): Dimensions => ({
-  width: screen.width - translate.x * 2,
-  height: screen.height - translate.y * 2,
-});
+): Dimensions => {
+  return {
+    width: screen.width - translate.x * 2,
+    height: screen.height - translate.y * 2,
+  };
+  
+};
 
 export const getImageTranslateForScale = (
   currentTranslate: Position,
@@ -123,8 +126,8 @@ export const getImageTranslateForScale = (
   );
 
   const targetImageDimensions = {
-    width: width * targetScale,
-    height: height * targetScale,
+    width: (width) * targetScale,
+    height: (height) * targetScale,
   };
 
   return getImageTranslate(targetImageDimensions, screen);

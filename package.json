@@ -42,5 +42,8 @@
     "react": "16.12.0",
     "react-native": "0.61.5",
     "typescript": "3.7.2"
+  },
+  "dependencies": {
+    "expo-video-player": "^2.0.3"
   }
 }

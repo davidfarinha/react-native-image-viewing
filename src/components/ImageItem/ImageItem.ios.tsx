@@ -6,6 +6,9 @@
  *
  */
 
+
+// TODO: [DEF]: [22/12/21]: Implement the same for android
+
 import React, { useCallback, useRef, useState } from "react";
 
 import {
@@ -18,7 +21,9 @@ import {
   NativeSyntheticEvent,
   TouchableWithoutFeedback,
   GestureResponderEvent,
+  Platform,
 } from "react-native";
+import { Video } from 'expo-av';
 
 import useDoubleTapToZoom from "../../hooks/useDoubleTapToZoom";
 import useImageDimensions from "../../hooks/useImageDimensions";
@@ -26,12 +31,15 @@ import useImageDimensions from "../../hooks/useImageDimensions";
 import { getImageStyles, getImageTransform } from "../../utils";
 import { ImageSource } from "../../@types";
 import { ImageLoading } from "./ImageLoading";
+import VideoPlayer from 'expo-video-player'
 
 const SWIPE_CLOSE_OFFSET = 75;
 const SWIPE_CLOSE_VELOCITY = 1.55;
 const SCREEN = Dimensions.get("screen");
 const SCREEN_WIDTH = SCREEN.width;
 const SCREEN_HEIGHT = SCREEN.height;
+
+// const AnimatedVideoPlayer = Animated.createAnimatedComponent(VideoPlayer)
 
 type Props = {
   imageSrc: ImageSource;
@@ -49,8 +57,10 @@ const ImageItem = ({
   onRequestClose,
   onLongPress,
   delayLongPress,
+  isFullscreen,
+  setIsFullscreen,
   swipeToCloseEnabled = true,
-  doubleTapToZoomEnabled = true,
+  doubleTapToZoomEnabled = imageSrc.mediaType !== 'video',
 }: Props) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [loaded, setLoaded] = useState(false);
@@ -60,7 +70,7 @@ const ImageItem = ({
 
   const [translate, scale] = getImageTransform(imageDimensions, SCREEN);
   const scrollValueY = new Animated.Value(0);
-  const scaleValue = new Animated.Value(scale || 1);
+  const scaleValue = new Animated.Value((imageSrc.mediaType !== 'video' ? scale : 1) || 1);
   const translateValue = new Animated.ValueXY(translate);
   const maxScale = scale && scale > 0 ? Math.max(1 / scale, 1) : 1;
 
@@ -68,6 +78,8 @@ const ImageItem = ({
     inputRange: [-SWIPE_CLOSE_OFFSET, 0, SWIPE_CLOSE_OFFSET],
     outputRange: [0.5, 1, 0.5],
   });
+  const refVideo = useRef(null)
+  
   const imagesStyles = getImageStyles(
     imageDimensions,
     translateValue,
@@ -113,6 +125,9 @@ const ImageItem = ({
     [imageSrc, onLongPress]
   );
 
+  const appleId = imageSrc.uri.substring(9, 45);
+  const assetLibraryUri = `assets-library://asset/asset.${'MOV'}?id=${appleId}&ext=${'MOV'}`;
+  
   return (
     <View>
       <ScrollView
@@ -137,11 +152,55 @@ const ImageItem = ({
           onLongPress={onLongPressHandler}
           delayLongPress={delayLongPress}
         >
-          <Animated.Image
-            source={imageSrc}
+          {imageSrc.mediaType === 'video' ? <Animated.View style={[
+            imageStylesWithOpacity,
+            {
+              justifyContent: 'center',
+              alignItems: 'center'
+            }
+          ]} >
+              <VideoPlayer
+              fullscreen={{
+                enterFullscreen: () => {
+                  setIsFullscreen(true);
+                  // console.log('[refVideo]', refVideo.current);
+                  refVideo.current.setStatusAsync({
+                    shouldPlay: true,
+                  })
+                },
+                exitFullscreen: () => {
+                  setIsFullscreen(false);
+                  refVideo.current.setStatusAsync({
+                    shouldPlay: false,
+                  })
+                },
+                inFullscreen: isFullscreen,
+              }}
+              videoProps={{
+                resizeMode: "contain",
+                // useNativeControls: true,
+                isLooping: true,
+                ref: refVideo,
+                // shouldPlay: true,
+                onLoad: () => setLoaded(true),
+                  source: {
+                    uri: assetLibraryUri
+                  },
+                }}
+                style={{
+                  height: isFullscreen ? Dimensions.get('window').height : Dimensions.get('window').height - 200,
+                  width: isFullscreen ? Dimensions.get('window').width : Dimensions.get('window').width,
+                  
+                }}
+            />
+          </Animated.View> : <Animated.Image
+            source={{
+              ...imageSrc,
+              uri: imageSrc._uri || imageSrc.uri
+            }}
             style={imageStylesWithOpacity}
             onLoad={() => setLoaded(true)}
-          />
+          />}
         </TouchableWithoutFeedback>
       </ScrollView>
     </View>
@@ -154,7 +213,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
   },
   imageScrollContainer: {
-    height: SCREEN_HEIGHT,
+    height: SCREEN_HEIGHT
   },
 });
 

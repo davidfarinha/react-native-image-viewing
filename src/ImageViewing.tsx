@@ -6,7 +6,7 @@
  *
  */
 
-import React, { ComponentType, useCallback, useEffect } from "react";
+import React, { ComponentType, useCallback, useEffect, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -69,12 +69,15 @@ function ImageViewing({
 }: Props) {
   const imageList = React.createRef<VirtualizedList<ImageSource>>();
   const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
   const [currentImageIndex, onScroll] = useImageIndexChange(imageIndex, SCREEN);
   const [
     headerTransform,
     footerTransform,
     toggleBarsVisible,
   ] = useAnimatedComponents();
+
 
   useEffect(() => {
     if (onImageIndexChange) {
@@ -108,7 +111,7 @@ function ImageViewing({
       <StatusBarManager presentationStyle={presentationStyle} />
       <View style={[styles.container, { opacity, backgroundColor }]}>
         <Animated.View style={[styles.header, { transform: headerTransform }]}>
-          {typeof HeaderComponent !== "undefined"
+          {typeof HeaderComponent !== "undefined" && isFullscreen === false
             ? (
               React.createElement(HeaderComponent, {
                 imageIndex: currentImageIndex,
@@ -142,6 +145,8 @@ function ImageViewing({
               imageSrc={imageSrc}
               onRequestClose={onRequestCloseEnhanced}
               onLongPress={onLongPress}
+              isFullscreen={isFullscreen}
+              setIsFullscreen={setIsFullscreen}
               delayLongPress={delayLongPress}
               swipeToCloseEnabled={swipeToCloseEnabled}
               doubleTapToZoomEnabled={doubleTapToZoomEnabled}
@@ -151,7 +156,7 @@ function ImageViewing({
           //@ts-ignore
           keyExtractor={(imageSrc, index) => keyExtractor ? keyExtractor(imageSrc, index) : imageSrc.uri || `${imageSrc}`}
         />
-        {typeof FooterComponent !== "undefined" && (
+        {typeof FooterComponent !== "undefined" && isFullscreen === false && (
           <Animated.View
             style={[styles.footer, { transform: footerTransform }]}
           >
