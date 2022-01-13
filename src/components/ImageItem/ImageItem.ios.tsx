@@ -181,7 +181,7 @@ const ImageItem = ({
                 // useNativeControls: true,
                 isLooping: true,
                 ref: refVideo,
-                // shouldPlay: true,
+                shouldPlay: true,
                 onLoad: () => setLoaded(true),
                   source: {
                     uri: assetLibraryUri
