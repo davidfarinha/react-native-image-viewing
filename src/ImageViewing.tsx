@@ -154,7 +154,7 @@ function ImageViewing({
           )}
           onMomentumScrollEnd={onScroll}
           //@ts-ignore
-          keyExtractor={(imageSrc, index) => keyExtractor ? keyExtractor(imageSrc, index) : imageSrc.uri || `${imageSrc}`}
+          keyExtractor={(imageSrc, index) => keyExtractor ? keyExtractor(imageSrc, index) : imageSrc._uri || `${imageSrc}`}
         />
         {typeof FooterComponent !== "undefined" && isFullscreen === false && (
           <Animated.View

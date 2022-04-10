@@ -51,7 +51,7 @@ export default function App() {
     )
   );
   const onLongPress = (image) => {
-    Alert.alert("Long Pressed", image.uri);
+    Alert.alert("Long Pressed", image._uri);
   };
 
   return (

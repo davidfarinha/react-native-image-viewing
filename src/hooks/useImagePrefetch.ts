@@ -14,9 +14,9 @@ const useImagePrefetch = (images: ImageSource[]) => {
   useEffect(() => {
     images.forEach((image) => {
       //@ts-ignore
-      if (image.uri) {
+      if (image._uri) {
         //@ts-ignore
-        return Image.prefetch(image.uri);
+        return Image.prefetch(image._uri);
       }
     });
   }, []);

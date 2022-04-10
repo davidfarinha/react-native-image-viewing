@@ -125,7 +125,9 @@ const ImageItem = ({
     [imageSrc, onLongPress]
   );
 
-  const appleId = imageSrc.uri.substring(9, 45);
+  console.log('[itemios]', imageSrc)
+  const appleId = imageSrc._uri.substring(9, 45);
+  
   const assetLibraryUri = `assets-library://asset/asset.${'MOV'}?id=${appleId}&ext=${'MOV'}`;
   
   return (
@@ -196,7 +198,7 @@ const ImageItem = ({
           </Animated.View> : <Animated.Image
             source={{
               ...imageSrc,
-              uri: imageSrc._uri || imageSrc.uri
+              uri: imageSrc._uri
             }}
             style={imageStylesWithOpacity}
             onLoad={() => setLoaded(true)}
