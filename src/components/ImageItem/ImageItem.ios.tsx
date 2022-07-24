@@ -9,7 +9,7 @@
 
 // TODO: [DEF]: [22/12/21]: Implement the same for android
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   Animated,
@@ -23,6 +23,7 @@ import {
   GestureResponderEvent,
   Platform,
 } from "react-native";
+import RNVideo from 'react-native-video';
 import { Video } from 'expo-av';
 
 import useDoubleTapToZoom from "../../hooks/useDoubleTapToZoom";
@@ -35,8 +36,11 @@ import VideoPlayer from 'expo-video-player'
 
 const SWIPE_CLOSE_OFFSET = 75;
 const SWIPE_CLOSE_VELOCITY = 1.55;
-const SCREEN = Dimensions.get("screen");
+const SCREEN_BEF = Dimensions.get("screen");
+const contentPaddingTopScreen = 218;
+const SCREEN = {...SCREEN_BEF, height: SCREEN_BEF.height - contentPaddingTopScreen };
 const SCREEN_WIDTH = SCREEN.width;
+
 const SCREEN_HEIGHT = SCREEN.height;
 
 // const AnimatedVideoPlayer = Animated.createAnimatedComponent(VideoPlayer)
@@ -58,6 +62,7 @@ const ImageItem = ({
   onLongPress,
   delayLongPress,
   isFullscreen,
+  currentImageSrc,
   setIsFullscreen,
   swipeToCloseEnabled = true,
   doubleTapToZoomEnabled = imageSrc.mediaType !== 'video',
@@ -67,6 +72,7 @@ const ImageItem = ({
   const [scaled, setScaled] = useState(false);
   const imageDimensions = useImageDimensions(imageSrc);
   const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, SCREEN);
+
 
   const [translate, scale] = getImageTransform(imageDimensions, SCREEN);
   const scrollValueY = new Animated.Value(0);
@@ -85,7 +91,16 @@ const ImageItem = ({
     translateValue,
     scaleValue
   );
-  const imageStylesWithOpacity = { ...imagesStyles, opacity: imageOpacity };
+
+
+
+  // useEffect(() => {
+  //   refVideo.current.setStatusAsync({
+  //     shouldPlay: true,
+  //   })
+  // }, [])
+
+  const imageStylesWithOpacity = { ...imagesStyles, opacity: imageOpacity, borderRadius: 12 };
 
   const onScrollEndDrag = useCallback(
     ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -100,6 +115,13 @@ const ImageItem = ({
         swipeToCloseEnabled &&
         Math.abs(velocityY) > SWIPE_CLOSE_VELOCITY
       ) {
+        // If video, stop playback
+        if (refVideo.current?.setStatusAsync) {
+          refVideo.current?.setStatusAsync?.({
+            shouldPlay: false,
+          })
+        }
+        
         onRequestClose();
       }
     },
@@ -125,22 +147,33 @@ const ImageItem = ({
     [imageSrc, onLongPress]
   );
 
-  console.log('[itemios]', imageSrc)
-  const appleId = imageSrc._uri.substring(9, 45);
+  // const appleId = imageSrc.localIdentifier;
+  const appleId = imageSrc.localIdentifier.substring(0, 36);
   
   const assetLibraryUri = `assets-library://asset/asset.${'MOV'}?id=${appleId}&ext=${'MOV'}`;
+
+  useEffect(() => {
+    if (imageSrc.mediaType) {
+      // refVideo.current.playAsync();
+    }
+    
+    // shouldPlay: currentImageSrc === imageSrc,
+  }, [])
+
   
+
+  // [20/07/22]: HAVING ISSUES WITH EXPO-VIDEO/EXPO-AV. If you swipe 18 videos forwards, it stop loading. switchign to rnvideo instead
   return (
-    <View>
+    <View style={{  }}>
       <ScrollView
         ref={scrollViewRef}
-        style={styles.listItem}
+        style={styles.scrollView}
         pinchGestureEnabled
         nestedScrollEnabled={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         maximumZoomScale={maxScale}
-        contentContainerStyle={styles.imageScrollContainer}
+        contentContainerStyle={styles.scrollViewContainer}
         scrollEnabled={swipeToCloseEnabled}
         onScrollEndDrag={onScrollEndDrag}
         scrollEventThrottle={1}
@@ -154,24 +187,56 @@ const ImageItem = ({
           onLongPress={onLongPressHandler}
           delayLongPress={delayLongPress}
         >
-          {imageSrc.mediaType === 'video' ? <Animated.View style={[
+          {imageSrc.mediaType === 'video' ?
+          <Animated.View style={[
             imageStylesWithOpacity,
             {
               justifyContent: 'center',
               alignItems: 'center'
             }
           ]} >
-              <VideoPlayer
+            <RNVideo
+            controls
+            repeat
+    source={{
+        ...imageSrc, 
+        uri: assetLibraryUri
+    }}
+    poster={assetLibraryUri}
+    onLoad={() =>{
+      setLoaded(true)
+    }}
+    onError={(error) =>{
+      console.log('[error]', error);
+      // setLoaded(true)
+    }}
+    resizeMode={"contain"}
+    posterResizeMode={"contain"}
+    style={{
+      height: isFullscreen ? Dimensions.get('window').height : Dimensions.get('window').height - 200,
+      width: isFullscreen ? Dimensions.get('window').width : Dimensions.get('window').width,
+      
+    }}
+    // Can be a URL or a local file.
+    // ref={(ref) => {
+    //   this.player = ref
+    // }}                                      // Store reference
+    // onBuffer={this.onBuffer}                // Callback when remote video is buffering
+    // onError={this.videoError}               // Callback when video cannot be loaded
+    // style={styles.backgroundVideo}
+/>
+              {/* <VideoPlayer
               fullscreen={{
                 enterFullscreen: () => {
                   setIsFullscreen(true);
-                  // console.log('[refVideo]', refVideo.current);
-                  refVideo.current.setStatusAsync({
-                    shouldPlay: true,
-                  })
+                  // console.log('[enterFullscreen]', refVideo.current);
+                  // refVideo.current.setStatusAsync({
+                  //   shouldPlay: true,
+                  // })
                 },
                 exitFullscreen: () => {
                   setIsFullscreen(false);
+                  console.log('[exitFullscreen]');
                   refVideo.current.setStatusAsync({
                     shouldPlay: false,
                   })
@@ -179,13 +244,18 @@ const ImageItem = ({
                 inFullscreen: isFullscreen,
               }}
               videoProps={{
+                onError: (error) => {
+                  console.log('[error]', error);
+                },
                 resizeMode: "contain",
                 // useNativeControls: true,
                 isLooping: true,
-                ref: refVideo,
-                shouldPlay: true,
+                shouldPlay: currentImageSrc === imageSrc,
+                ref: refVideo.current,
+                
                 onLoad: () => setLoaded(true),
                   source: {
+                    // ...imageSrc, 
                     uri: assetLibraryUri
                   },
                 }}
@@ -194,15 +264,15 @@ const ImageItem = ({
                   width: isFullscreen ? Dimensions.get('window').width : Dimensions.get('window').width,
                   
                 }}
+            /> */}
+          </Animated.View>
+          : 
+            <Animated.Image
+              source={{ ...imageSrc, uri: `photos://${imageSrc.localIdentifier}`}}
+              style={imageStylesWithOpacity}
+              onLoad={() => setLoaded(true)}
             />
-          </Animated.View> : <Animated.Image
-            source={{
-              ...imageSrc,
-              uri: imageSrc._uri
-            }}
-            style={imageStylesWithOpacity}
-            onLoad={() => setLoaded(true)}
-          />}
+              }
         </TouchableWithoutFeedback>
       </ScrollView>
     </View>
@@ -210,12 +280,14 @@ const ImageItem = ({
 };
 
 const styles = StyleSheet.create({
-  listItem: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+  scrollView: {
+    width: SCREEN_BEF.width,
+    height: SCREEN_BEF.height
   },
-  imageScrollContainer: {
-    height: SCREEN_HEIGHT
+  scrollViewContainer: {
+    height: SCREEN_BEF.height,
+    paddingTop: 90,
+    paddingBottom: 105,
   },
 });
 

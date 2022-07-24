@@ -81,6 +81,7 @@ export const getImageStyles = (
   }
 
   return {
+    
     width: image.width,
     height: image.height,
     transform,

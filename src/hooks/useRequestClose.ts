@@ -14,6 +14,7 @@ const useRequestClose = (onRequestClose: () => void) => {
   return [
     opacity,
     () => {
+      console.log('[useRequestClose]');
       setOpacity(0);
       onRequestClose();
       setTimeout(() => setOpacity(1), 0);

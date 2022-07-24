@@ -44,6 +44,6 @@
     "typescript": "3.7.2"
   },
   "dependencies": {
-    "expo-video-player": "^2.0.3"
+    "expo-video-player": "2.1.0"
   }
 }

@@ -6,7 +6,7 @@
  *
  */
 
-import React, { ComponentType, useCallback, useEffect, useState } from "react";
+import React, { ComponentType, useCallback, useEffect, useImperativeHandle, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -50,8 +50,9 @@ const DEFAULT_DELAY_LONG_PRESS = 800;
 const SCREEN = Dimensions.get("screen");
 const SCREEN_WIDTH = SCREEN.width;
 
-function ImageViewing({
+const ImageViewing = React.forwardRef(({
   images,
+  children,
   keyExtractor,
   imageIndex,
   visible,
@@ -66,17 +67,21 @@ function ImageViewing({
   delayLongPress = DEFAULT_DELAY_LONG_PRESS,
   HeaderComponent,
   FooterComponent,
-}: Props) {
+}: Props, ref) => {
   const imageList = React.createRef<VirtualizedList<ImageSource>>();
   const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  const [currentImageIndex, onScroll] = useImageIndexChange(imageIndex, SCREEN);
+  const [currentImageIndex, onScroll, setImageIndex] = useImageIndexChange(imageIndex, SCREEN);
   const [
     headerTransform,
     footerTransform,
     toggleBarsVisible,
   ] = useAnimatedComponents();
+
+  useImperativeHandle(ref, () => ({
+    setImageIndex
+  }))
 
 
   useEffect(() => {
@@ -94,9 +99,9 @@ function ImageViewing({
     [imageList],
   );
 
-  if (!visible) {
-    return null;
-  }
+  // if (!visible) {
+  //   return null;
+  // }
 
   return (
     <Modal
@@ -109,6 +114,7 @@ function ImageViewing({
       hardwareAccelerated
     >
       <StatusBarManager presentationStyle={presentationStyle} />
+      {children}
       <View style={[styles.container, { opacity, backgroundColor }]}>
         <Animated.View style={[styles.header, { transform: headerTransform }]}>
           {typeof HeaderComponent !== "undefined" && isFullscreen === false
@@ -124,6 +130,7 @@ function ImageViewing({
         <VirtualizedList
           ref={imageList}
           data={images}
+          key={imageIndex}
           horizontal
           pagingEnabled
           windowSize={2}
@@ -139,7 +146,7 @@ function ImageViewing({
             offset: SCREEN_WIDTH * index,
             index,
           })}
-          renderItem={({ item: imageSrc }) => (
+          renderItem={({ item: imageSrc , index}) => (
             <ImageItem
               onZoom={onZoom}
               imageSrc={imageSrc}
@@ -147,6 +154,7 @@ function ImageViewing({
               onLongPress={onLongPress}
               isFullscreen={isFullscreen}
               setIsFullscreen={setIsFullscreen}
+              currentImageSrc={images[currentImageIndex]}
               delayLongPress={delayLongPress}
               swipeToCloseEnabled={swipeToCloseEnabled}
               doubleTapToZoomEnabled={doubleTapToZoomEnabled}
@@ -168,7 +176,7 @@ function ImageViewing({
       </View>
     </Modal>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -189,8 +197,8 @@ const styles = StyleSheet.create({
   },
 });
 
-const EnhancedImageViewing = (props: Props) => (
-  <ImageViewing key={props.imageIndex} {...props} />
+const EnhancedImageViewing = (props: Props, ref) => (
+  <ImageViewing key={props.imageIndex} {...props} ref={ref} />
 );
 
-export default EnhancedImageViewing;
+export default ImageViewing;

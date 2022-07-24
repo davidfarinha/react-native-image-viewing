@@ -28,6 +28,7 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
           const { width, height } = Image.resolveAssetSource(image);
           imageDimensions = { width, height };
           imageDimensionsCache.set(cacheKey, imageDimensions);
+
         }
 
         resolve(imageDimensions);
@@ -36,10 +37,11 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
       }
 
       // @ts-ignore
-      if (image._uri) {
+      if (image.localIdentifier) {
         const source = image as ImageURISource;
 
-        const cacheKey = source._uri as string;
+        // const cacheKey = source._uri as string;
+        const cacheKey = `photos://${image.localIdentifier}`
 
         const imageDimensions = imageDimensionsCache.get(cacheKey);
 
@@ -48,7 +50,7 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
         } else {
           // @ts-ignore
           Image.getSizeWithHeaders(
-            source._uri,
+            cacheKey,
             source.headers,
             (width: number, height: number) => {
               imageDimensionsCache.set(cacheKey, { width, height });
