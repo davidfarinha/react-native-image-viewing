@@ -57,9 +57,11 @@ export const getImageTransform = (
     return [] as const;
   }
 
-  const wScale = screen.width / image.width;
+  const wScale = (screen.width / image.width) * 0.9;
   const hScale = screen.height / image.height;
+
   const scale = Math.min(wScale, hScale);
+  
   const { x, y } = getImageTranslate(image, screen);
 
   return [{ x, y }, scale] as const;
@@ -75,6 +77,7 @@ export const getImageStyles = (
   }
 
   const transform = translate.getTranslateTransform();
+  
 
   if (scale) {
     transform.push({ scale }, { perspective: new Animated.Value(1000) });
@@ -82,9 +85,10 @@ export const getImageStyles = (
 
   return {
     
-    width: image.width,
+    width: image.width ,
     height: image.height,
     transform,
+    // scale,
   };
 };
 

@@ -9,7 +9,7 @@
 
 // TODO: [DEF]: [22/12/21]: Implement the same for android
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Animated,
@@ -22,6 +22,7 @@ import {
   TouchableWithoutFeedback,
   GestureResponderEvent,
   Platform,
+  Image,
 } from "react-native";
 import RNVideo from 'react-native-video';
 import { Video } from 'expo-av';
@@ -37,11 +38,12 @@ import VideoPlayer from 'expo-video-player'
 const SWIPE_CLOSE_OFFSET = 75;
 const SWIPE_CLOSE_VELOCITY = 1.55;
 const SCREEN_BEF = Dimensions.get("screen");
-const contentPaddingTopScreen = 218;
-const SCREEN = {...SCREEN_BEF, height: SCREEN_BEF.height - contentPaddingTopScreen };
-const SCREEN_WIDTH = SCREEN.width;
 
-const SCREEN_HEIGHT = SCREEN.height;
+// const contentPaddingTopScreen = 220;
+
+
+const SCREEN = {width: SCREEN_BEF.width, height: SCREEN_BEF.height - 280 };
+
 
 // const AnimatedVideoPlayer = Animated.createAnimatedComponent(VideoPlayer)
 
@@ -55,28 +57,37 @@ type Props = {
   doubleTapToZoomEnabled?: boolean;
 };
 
+const borderRadius = 18;
+
 const ImageItem = ({
   imageSrc,
   onZoom,
   onRequestClose,
+  
   onLongPress,
   delayLongPress,
+  index,
   isFullscreen,
-  currentImageSrc,
+  isCurrentImage,
   setIsFullscreen,
+  assetsActionedDeleted,
+  assetsActionedFavorited,
   swipeToCloseEnabled = true,
   doubleTapToZoomEnabled = imageSrc.mediaType !== 'video',
 }: Props) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [loaded, setLoaded] = useState(false);
+  const [shouldPlay, setShouldPlay] = useState(false);
+  
   const [scaled, setScaled] = useState(false);
   const imageDimensions = useImageDimensions(imageSrc);
+  
   const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, SCREEN);
 
 
   const [translate, scale] = getImageTransform(imageDimensions, SCREEN);
-  const scrollValueY = new Animated.Value(0);
-  const scaleValue = new Animated.Value((imageSrc.mediaType !== 'video' ? scale : 1) || 1);
+  const scrollValueY = new Animated.Value(1);
+  const scaleValue = new Animated.Value((imageSrc.mediaType !== 'video' ? scale : scale) || 1);
   const translateValue = new Animated.ValueXY(translate);
   const maxScale = scale && scale > 0 ? Math.max(1 / scale, 1) : 1;
 
@@ -89,18 +100,18 @@ const ImageItem = ({
   const imagesStyles = getImageStyles(
     imageDimensions,
     translateValue,
-    scaleValue
+    scaleValue,
+    // translateValue,
+    // scaleValue
   );
 
+  const shouldStartPlaying = isCurrentImage && loaded;
+  
 
-
-  // useEffect(() => {
-  //   refVideo.current.setStatusAsync({
-  //     shouldPlay: true,
-  //   })
-  // }, [])
-
-  const imageStylesWithOpacity = { ...imagesStyles, opacity: imageOpacity, borderRadius: 12 };
+  useEffect(() => {
+    setShouldPlay(shouldStartPlaying)
+    
+  }, [shouldStartPlaying])
 
   const onScrollEndDrag = useCallback(
     ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -149,8 +160,18 @@ const ImageItem = ({
 
   // const appleId = imageSrc.localIdentifier;
   const appleId = imageSrc.localIdentifier.substring(0, 36);
+
+  // console.log('[imageSrc]', imageSrc)
   
   const assetLibraryUri = `assets-library://asset/asset.${'MOV'}?id=${appleId}&ext=${'MOV'}`;
+
+  const photosUri =  `photos://${imageSrc.localIdentifier}`;
+
+  let uri = `ph://${imageSrc.localIdentifier}`;
+
+	// console.log('[uri]', uri);
+
+  
 
   useEffect(() => {
     if (imageSrc.mediaType) {
@@ -158,13 +179,48 @@ const ImageItem = ({
     }
     
     // shouldPlay: currentImageSrc === imageSrc,
-  }, [])
+  }, []);
 
+  
+  const isActionedDeleted = useMemo(() => assetsActionedDeleted?.has(imageSrc?.localIdentifier), [assetsActionedDeleted, imageSrc]);
+  const isActionedFavorited = useMemo(() => imageSrc.isFavorite || assetsActionedFavorited?.has(imageSrc?.localIdentifier), [assetsActionedFavorited, imageSrc])
+
+  
+  // if (shouldStartPlaying)
+  
+  // const isActionedDeleted = assetsActionedDeleted.indexOf
+  // assetsActionedFavorited
+
+
+  const renderedDeletedContent = useMemo(() => <Image source={require('../../../../../src/shared/components/AssetInteractable/images/trash.png')} style={{
+    position: 'absolute',
+		// right: 0,
+		// top: 0,
+    // bottom: 0,
+    // left: 0,
+    
+    zIndex: 999,
+    height: 38,
+    width: 38
+  }} />, []);
+
+	const renderedFavoritedContent = useMemo(() => <Image source={require('../../../../../src/shared/images/favourite.png')} style={{
+    position: 'absolute',
+
+    zIndex: 999,
+		height: 38,
+    width: 38
+  }} />, []);
+
+  // let uri = `ph://${currentImage?.localIdentifier}`;
+
+	// console.log('[uri]', uri);
+
+  // console.log('photosUri', imageSrc);
   
 
   // [20/07/22]: HAVING ISSUES WITH EXPO-VIDEO/EXPO-AV. If you swipe 18 videos forwards, it stop loading. switchign to rnvideo instead
   return (
-    <View style={{  }}>
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}
@@ -173,7 +229,7 @@ const ImageItem = ({
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         maximumZoomScale={maxScale}
-        contentContainerStyle={styles.scrollViewContainer}
+        contentContainerStyle={styles.scrollViewContentContainer}
         scrollEnabled={swipeToCloseEnabled}
         onScrollEndDrag={onScrollEndDrag}
         scrollEventThrottle={1}
@@ -181,113 +237,170 @@ const ImageItem = ({
           onScroll,
         })}
       >
+        {isActionedDeleted ? renderedDeletedContent : isActionedFavorited && renderedFavoritedContent}
         {(!loaded || !imageDimensions) && <ImageLoading />}
-        <TouchableWithoutFeedback
-          onPress={doubleTapToZoomEnabled ? handleDoubleTap : undefined}
-          onLongPress={onLongPressHandler}
-          delayLongPress={delayLongPress}
-        >
-          {imageSrc.mediaType === 'video' ?
-          <Animated.View style={[
-            imageStylesWithOpacity,
-            {
-              justifyContent: 'center',
-              alignItems: 'center'
-            }
-          ]} >
-            <RNVideo
-            controls
-            repeat
-    source={{
-        ...imageSrc, 
-        uri: assetLibraryUri
-    }}
-    poster={assetLibraryUri}
-    onLoad={() =>{
-      setLoaded(true)
-    }}
-    onError={(error) =>{
-      console.log('[error]', error);
-      // setLoaded(true)
-    }}
-    resizeMode={"contain"}
-    posterResizeMode={"contain"}
-    style={{
-      height: isFullscreen ? Dimensions.get('window').height : Dimensions.get('window').height - 200,
-      width: isFullscreen ? Dimensions.get('window').width : Dimensions.get('window').width,
-      
-    }}
-    // Can be a URL or a local file.
-    // ref={(ref) => {
-    //   this.player = ref
-    // }}                                      // Store reference
-    // onBuffer={this.onBuffer}                // Callback when remote video is buffering
-    // onError={this.videoError}               // Callback when video cannot be loaded
-    // style={styles.backgroundVideo}
-/>
-              {/* <VideoPlayer
-              fullscreen={{
-                enterFullscreen: () => {
-                  setIsFullscreen(true);
-                  // console.log('[enterFullscreen]', refVideo.current);
-                  // refVideo.current.setStatusAsync({
-                  //   shouldPlay: true,
-                  // })
-                },
-                exitFullscreen: () => {
-                  setIsFullscreen(false);
-                  console.log('[exitFullscreen]');
-                  refVideo.current.setStatusAsync({
-                    shouldPlay: false,
-                  })
-                },
-                inFullscreen: isFullscreen,
+        
+           <Animated.View style={{ height: imagesStyles.height, width: imagesStyles.width, transform: [{scale: scaleValue }]}}>
+           
+          <View style={{ flex: 1, position: 'relative', height: '100%', width: '100%'}}>
+          
+            <TouchableWithoutFeedback
+              onPress={doubleTapToZoomEnabled ? handleDoubleTap : undefined}
+              onLongPress={onLongPressHandler}
+              delayLongPress={delayLongPress}
+              style={{
+              
               }}
-              videoProps={{
-                onError: (error) => {
-                  console.log('[error]', error);
-                },
-                resizeMode: "contain",
-                // useNativeControls: true,
-                isLooping: true,
-                shouldPlay: currentImageSrc === imageSrc,
-                ref: refVideo.current,
-                
-                onLoad: () => setLoaded(true),
-                  source: {
+            >
+              {imageSrc.mediaType === 'video' ?
+                <RNVideo
+                controls={false}
+
+                paused={!shouldPlay}
+                repeat
+                source={{
                     // ...imageSrc, 
-                    uri: assetLibraryUri
-                  },
+                    uri: uri
                 }}
+                poster={uri}
+                onLoad={() =>{
+                  setLoaded(true)
+                }}
+                onReadyForDisplay={() => {
+                  // console.log('[onReadyForDisplay]');
+
+                  setLoaded(true)
+                }}
+                onError={(error) =>{
+                  console.log('[error]', error);
+                  // setLoaded(true)
+                }}
+                resizeMode={"contain"}
+                posterResizeMode={"contain"}
                 style={{
-                  height: isFullscreen ? Dimensions.get('window').height : Dimensions.get('window').height - 200,
-                  width: isFullscreen ? Dimensions.get('window').width : Dimensions.get('window').width,
+                  // height: isFullscreen ? Dimensions.get('window').height : '100%',
+                  // width: isFullscreen ? Dimensions.get('window').width : '100%',
+                  height: '100%',
+                  width: '100%',
+                  borderRadius,
+                  flex: 1
                   
                 }}
-            /> */}
-          </Animated.View>
-          : 
-            <Animated.Image
-              source={{ ...imageSrc, uri: `photos://${imageSrc.localIdentifier}`}}
-              style={imageStylesWithOpacity}
-              onLoad={() => setLoaded(true)}
-            />
-              }
-        </TouchableWithoutFeedback>
+            /> 
+              //  <Video
+               
+              //  defaultControlsVisible={false}
+              //  fullscreen={undefined}
+              //  useNativeControls={false}
+              //  controls={false}
+
+              // fullscreen={{
+              //   enterFullscreen: () => {
+              //     setIsFullscreen(true);
+              //     // console.log('[refVideo]', refVideo.current);
+              //     refVideo.current.setStatusAsync({
+              //       shouldPlay: true,
+              //     })
+              //   },
+              //   exitFullscreen: () => {
+              //     setIsFullscreen(false);
+              //     refVideo.current.setStatusAsync({
+              //       shouldPlay: false,
+              //     })
+              //   },
+              //   inFullscreen: isFullscreen,
+              // }}
+              
+            //   resizeMode={"contain"}
+            //   useNativeControls={false}
+            //   isLooping={true}
+            //   onVideo
+            //   onError={(_, __) => {
+            //     console.error('AN error ', _,);
+            //   }}               
+            //   ref={refVideo}
+            //   shouldPlay={shouldPlay}
+            //   controls={false}
+            //   onLoad={() => setLoaded(true)}
+            //     source={{
+            //       uri: uri
+            //     }}
+            //     style={{
+            //       // height: '100%',
+            //       // width: '100%',
+            //       borderRadius,
+            //       flex: 1
+
+            //     }}
+                
+            // />
+            
+                  : 
+                  
+                    <Image
+                      source={{  uri: `ph://${imageSrc.localIdentifier}`}}
+                      style={{
+                        height: '100%',
+                        width: '100%',
+                        borderRadius
+                      }}
+                      onLoad={() => setLoaded(true)}
+                    />}
+                     
+               
+                </TouchableWithoutFeedback>   
+                {isActionedDeleted ? <>
+                  <View style={{
+                    backgroundColor: '#141414',
+                    opacity: 0.35,
+                    ...StyleSheet.absoluteFillObject,
+                    borderRadius,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }} />
+                  {/* {renderedDeletedContent} */}
+                </> : isActionedFavorited && <>
+                  <View style={{
+                     backgroundColor: '#2D78E7',
+                     opacity: 0.35,
+                     justifyContent: 'center',
+                     alignItems: 'center',
+                     ...StyleSheet.absoluteFillObject,
+                     borderRadius,
+                     zIndex: 999
+                  }} />
+                  
+                </>}
+                
+                </View>
+        {/* </View> */}
+       
+        </Animated.View>
+       
       </ScrollView>
-    </View>
   );
 };
 
 const styles = StyleSheet.create({
   scrollView: {
-    width: SCREEN_BEF.width,
-    height: SCREEN_BEF.height
+    width: SCREEN.width,
+    // paddingTop: contentPaddingTopScreen / 2,
+    height: SCREEN.height,
+    alignSelf: 'center'
   },
-  scrollViewContainer: {
-    height: SCREEN_BEF.height,
-    paddingTop: 90,
-    paddingBottom: 105,
+  scrollViewContentContainer: {
+    flex: 1,
+    position: 'relative',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
+    // paddingHorizontal: '6%'
+    // height: SCREEN_BEF.height,
+
+    // paddingTop: 110,
+    // paddingBottom: 125,
+    
+    
   },
 });
 

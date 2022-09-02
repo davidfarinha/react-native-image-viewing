@@ -59,6 +59,7 @@ const ImageViewing = React.forwardRef(({
   onRequestClose,
   onLongPress = () => {},
   onImageIndexChange,
+  onImageIndexWillChange,
   animationType = DEFAULT_ANIMATION_TYPE,
   backgroundColor = DEFAULT_BG_COLOR,
   presentationStyle,
@@ -67,12 +68,15 @@ const ImageViewing = React.forwardRef(({
   delayLongPress = DEFAULT_DELAY_LONG_PRESS,
   HeaderComponent,
   FooterComponent,
+  assetsActionedDeleted,
+  assetsActionedFavorited
 }: Props, ref) => {
   const imageList = React.createRef<VirtualizedList<ImageSource>>();
   const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  const [currentImageIndex, onScroll, setImageIndex] = useImageIndexChange(imageIndex, SCREEN);
+  const [currentImageIndex, onScroll, onScrollEnd, setImageIndex] = useImageIndexChange(imageIndex, SCREEN, onImageIndexWillChange);
+
   const [
     headerTransform,
     footerTransform,
@@ -80,14 +84,19 @@ const ImageViewing = React.forwardRef(({
   ] = useAnimatedComponents();
 
   useImperativeHandle(ref, () => ({
-    setImageIndex
+    setImageIndex: (index) => {
+      
+      
+      imageList.current?.scrollToIndex({ animated: true, index })
+      setImageIndex(index);
+    }
   }))
 
 
   useEffect(() => {
-    if (onImageIndexChange) {
-      onImageIndexChange(currentImageIndex);
-    }
+      if (onImageIndexChange) {
+        onImageIndexChange(currentImageIndex);
+      }
   }, [currentImageIndex]);
 
   const onZoom = useCallback(
@@ -99,9 +108,18 @@ const ImageViewing = React.forwardRef(({
     [imageList],
   );
 
+
+
+
+
+  // useEffect(() => {
+  //   forceUpdate();
+  // }, [currentImageSrc])
   // if (!visible) {
   //   return null;
   // }
+
+  
 
   return (
     <Modal
@@ -116,7 +134,7 @@ const ImageViewing = React.forwardRef(({
       <StatusBarManager presentationStyle={presentationStyle} />
       {children}
       <View style={[styles.container, { opacity, backgroundColor }]}>
-        <Animated.View style={[styles.header, { transform: headerTransform }]}>
+        <Animated.View style={[styles.header]}>
           {typeof HeaderComponent !== "undefined" && isFullscreen === false
             ? (
               React.createElement(HeaderComponent, {
@@ -130,7 +148,6 @@ const ImageViewing = React.forwardRef(({
         <VirtualizedList
           ref={imageList}
           data={images}
-          key={imageIndex}
           horizontal
           pagingEnabled
           windowSize={2}
@@ -146,27 +163,40 @@ const ImageViewing = React.forwardRef(({
             offset: SCREEN_WIDTH * index,
             index,
           })}
-          renderItem={({ item: imageSrc , index}) => (
-            <ImageItem
-              onZoom={onZoom}
-              imageSrc={imageSrc}
-              onRequestClose={onRequestCloseEnhanced}
-              onLongPress={onLongPress}
-              isFullscreen={isFullscreen}
-              setIsFullscreen={setIsFullscreen}
-              currentImageSrc={images[currentImageIndex]}
-              delayLongPress={delayLongPress}
-              swipeToCloseEnabled={swipeToCloseEnabled}
-              doubleTapToZoomEnabled={doubleTapToZoomEnabled}
-            />
-          )}
+          extraData={{
+            currentImageIndex,
+            imageIndex,
+            assetsActionedDeleted,
+            assetsActionedFavorited
+          }}
+          renderItem={({ item: imageSrc, index}) => {
+            return (
+              <ImageItem
+                onZoom={onZoom}
+                imageSrc={imageSrc}
+                onRequestClose={onRequestCloseEnhanced}
+                onLongPress={onLongPress}
+                index={index}
+                isFullscreen={isFullscreen}
+                isCurrentImage={currentImageIndex === index}
+                setIsFullscreen={setIsFullscreen}
+                currentImageSrc={images[currentImageIndex]}
+                delayLongPress={delayLongPress}
+                swipeToCloseEnabled={swipeToCloseEnabled}
+                doubleTapToZoomEnabled={doubleTapToZoomEnabled}
+                assetsActionedDeleted={assetsActionedDeleted}
+                assetsActionedFavorited={assetsActionedFavorited}
+              />
+            )
+          }}
           onMomentumScrollEnd={onScroll}
+          onScrollEndDrag={onScrollEnd}
           //@ts-ignore
           keyExtractor={(imageSrc, index) => keyExtractor ? keyExtractor(imageSrc, index) : imageSrc._uri || `${imageSrc}`}
         />
         {typeof FooterComponent !== "undefined" && isFullscreen === false && (
           <Animated.View
-            style={[styles.footer, { transform: footerTransform }]}
+            style={[styles.footer]}
           >
             {React.createElement(FooterComponent, {
               imageIndex: currentImageIndex,
