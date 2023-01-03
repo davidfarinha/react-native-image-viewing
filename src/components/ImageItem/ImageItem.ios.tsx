@@ -23,7 +23,10 @@ import {
   GestureResponderEvent,
   Platform,
   Image,
+  Text,
 } from "react-native";
+import { Icon } from 'native-base';
+// import RNVideo from 'react-native-video-controls';
 import RNVideo from 'react-native-video';
 import { Video } from 'expo-av';
 
@@ -42,7 +45,7 @@ const SCREEN_BEF = Dimensions.get("screen");
 // const contentPaddingTopScreen = 220;
 
 
-const SCREEN = {width: SCREEN_BEF.width, height: SCREEN_BEF.height - 280 };
+const SCREEN = {width: SCREEN_BEF.width, height: SCREEN_BEF.height - 310 };
 
 
 // const AnimatedVideoPlayer = Animated.createAnimatedComponent(VideoPlayer)
@@ -70,6 +73,8 @@ const ImageItem = ({
   isFullscreen,
   isCurrentImage,
   setIsFullscreen,
+  assetsActionedHidden,
+  assetsActionedAlbums,
   assetsActionedDeleted,
   assetsActionedFavorited,
   swipeToCloseEnabled = true,
@@ -107,6 +112,11 @@ const ImageItem = ({
 
   const shouldStartPlaying = isCurrentImage && loaded;
   
+
+  // useEffect(() => {
+  //   setShouldPlay(shouldStartPlaying)
+    
+  // }, [shouldStartPlaying])
 
   useEffect(() => {
     setShouldPlay(shouldStartPlaying)
@@ -173,18 +183,48 @@ const ImageItem = ({
 
   
 
-  useEffect(() => {
-    if (imageSrc.mediaType) {
-      // refVideo.current.playAsync();
-    }
+  // useEffect(() => {
+  //   if (imageSrc.mediaType) {
+  //     refVideo.current.playAsync();
+  //   }
     
-    // shouldPlay: currentImageSrc === imageSrc,
-  }, []);
+  //   // shouldPlay: currentImageSrc === imageSrc,
+  // }, []);
 
   
   const isActionedDeleted = useMemo(() => assetsActionedDeleted?.has(imageSrc?.localIdentifier), [assetsActionedDeleted, imageSrc]);
   const isActionedFavorited = useMemo(() => imageSrc.isFavorite || assetsActionedFavorited?.has(imageSrc?.localIdentifier), [assetsActionedFavorited, imageSrc])
+  const isActionedHidden = useMemo(() => imageSrc.isHidden || assetsActionedHidden?.has(imageSrc?.localIdentifier), [assetsActionedHidden, imageSrc]);
+  const inAlbums = useMemo(() => {
+    return Object.keys(assetsActionedAlbums).reduce((prev, currentKey) => {
 
+      const currentAlbum = assetsActionedAlbums[currentKey];
+
+      
+
+      if (currentAlbum?.has(imageSrc?.localIdentifier) || (imageSrc.inAlbums?.indexOf?.(currentKey) > -1)) {
+        
+        prev.push(currentKey)
+      }
+      return prev;
+    }, []);
+  }, [assetsActionedAlbums, imageSrc]);
+
+  
+
+  // hook uses min, either width or height scale. but we need to calculate just the height scale again so we can determine how far from the bottom of teh screen to start rendering the 
+  // inAlbums list. Which renders outside the container with scale applied (since the parent scale fucks up the text size of inAlbums). So have to recreate the height from bottom of the main
+  // container to render the inAlbums list
+  // const scaleImageHeight = imageDimensions?.height ?  SCREEN.height / imageDimensions!.height : undefined
+  const actualImagePxFromBottom = imageDimensions?.height ?  SCREEN.height - (imageDimensions!.height * scale) : 0;
+  
+  const actualImagePxFromSide = imageDimensions?.width ?  SCREEN.width - (imageDimensions!.width * scale) : 0;
+  // console.log('[inAlbums]', {actualImagePxFromBottom, calc: (imageDimensions?.height * scale), SCREEN: SCREEN.height});
+  
+
+  
+
+  
   
   // if (shouldStartPlaying)
   
@@ -201,7 +241,7 @@ const ImageItem = ({
     
     zIndex: 999,
     height: 38,
-    width: 38
+    width: 42
   }} />, []);
 
 	const renderedFavoritedContent = useMemo(() => <Image source={require('../../../../../src/shared/images/favourite.png')} style={{
@@ -209,14 +249,31 @@ const ImageItem = ({
 
     zIndex: 999,
 		height: 38,
-    width: 38
+    width: 40
   }} />, []);
+
+  const renderedHiddenContent = useMemo(() => <Icon type="FontAwesome5" name='eye-slash'   style={{
+    position: 'absolute',
+		zIndex: 999,
+		fontSize: 26,
+		left: ((actualImagePxFromSide / 2) || 0) + 12,
+
+		color: 'white',
+		top: ((actualImagePxFromBottom / 2) + 12)
+  }} />, [actualImagePxFromSide, actualImagePxFromBottom]);
+
+
+  const maxAlbumLinesAllowed = 12
 
   // let uri = `ph://${currentImage?.localIdentifier}`;
 
-	// console.log('[uri]', uri);
+  if (isCurrentImage) {
+    console.log('[uri]', { loaded, isCurrentImage, index, shouldPlay});
+    
+  }
+	
 
-  // console.log('photosUri', imageSrc);
+  // console.log('photosUri', scale, imagesStyles?.height, imagesStyles?.width);
   
 
   // [20/07/22]: HAVING ISSUES WITH EXPO-VIDEO/EXPO-AV. If you swipe 18 videos forwards, it stop loading. switchign to rnvideo instead
@@ -237,14 +294,17 @@ const ImageItem = ({
           onScroll,
         })}
       >
+        {isActionedHidden ? renderedHiddenContent : null}
         {isActionedDeleted ? renderedDeletedContent : isActionedFavorited && renderedFavoritedContent}
+        
         {(!loaded || !imageDimensions) && <ImageLoading />}
         
-           <Animated.View style={{ height: imagesStyles.height, width: imagesStyles.width, transform: [{scale: scaleValue }]}}>
+          <View style={{ height: '100%', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
            
-          <View style={{ flex: 1, position: 'relative', height: '100%', width: '100%'}}>
+          <Animated.View style={{ flex: 1, position: 'relative', height: (imagesStyles?.height || 1)  * (scale || 1), width: (imagesStyles?.width || 1) * (scale || 1)}}>
+          {/* <Animated.View style={{ flex: 1, position: 'relative', height: 200, width: 200}}> */}
           
-            <TouchableWithoutFeedback
+            {/* <TouchableWithoutFeedback
               onPress={doubleTapToZoomEnabled ? handleDoubleTap : undefined}
               onLongPress={onLongPressHandler}
               delayLongPress={delayLongPress}
@@ -252,12 +312,14 @@ const ImageItem = ({
               
               }}
             >
+              <Animated.View style={{flex: 1}}> */}
               {imageSrc.mediaType === 'video' ?
                 <RNVideo
-                controls={false}
+                controls
 
                 paused={!shouldPlay}
                 repeat
+                
                 source={{
                     // ...imageSrc, 
                     uri: uri
@@ -265,11 +327,28 @@ const ImageItem = ({
                 poster={uri}
                 onLoad={() =>{
                   setLoaded(true)
+
+                  // if (isCurrentImage && !shouldPlay) {
+                  //   setTimeout(() => {
+                  //     console.log('[1]');
+                  //     setShouldPlay(true)
+                  //   }, 1000)
+                    
+
+                  // };
                 }}
                 onReadyForDisplay={() => {
                   // console.log('[onReadyForDisplay]');
 
                   setLoaded(true)
+
+                  // if (isCurrentImage && !shouldPlay) {
+                  //   setTimeout(() => {
+                  //     console.log('[2]');
+                  //     setShouldPlay(true)
+                  //   }, 1000)
+
+                  // };
                 }}
                 onError={(error) =>{
                   console.log('[error]', error);
@@ -347,9 +426,19 @@ const ImageItem = ({
                       onLoad={() => setLoaded(true)}
                     />}
                      
-               
-                </TouchableWithoutFeedback>   
-                {isActionedDeleted ? <>
+                  {/* </Animated.View>
+              </TouchableWithoutFeedback>    */}
+                {inAlbums?.length ? <>
+                  <View style={{
+                    backgroundColor: '#3BB4C3',
+                    opacity: 0.3,
+                    ...StyleSheet.absoluteFillObject,
+                    borderRadius,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }} />
+
+                </> : isActionedDeleted ? <>
                   <View style={{
                     backgroundColor: '#141414',
                     opacity: 0.35,
@@ -358,8 +447,7 @@ const ImageItem = ({
                     justifyContent: 'center',
                     alignItems: 'center'
                   }} />
-                  {/* {renderedDeletedContent} */}
-                </> : isActionedFavorited && <>
+                </> : isActionedFavorited ? <>
                   <View style={{
                      backgroundColor: '#2D78E7',
                      opacity: 0.35,
@@ -370,12 +458,36 @@ const ImageItem = ({
                      zIndex: 999
                   }} />
                   
-                </>}
-                
-                </View>
-        {/* </View> */}
-       
-        </Animated.View>
+                </> : isActionedHidden ? <>
+                  <View style={{
+                    backgroundColor: '#141414',
+                    opacity: 0.20,
+                    ...StyleSheet.absoluteFillObject,
+                    borderRadius,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }} />
+                </> : null}
+          </Animated.View>
+        </View>
+        {inAlbums?.length ? <View style={{ position: 'absolute', bottom: (actualImagePxFromBottom / 2) + 6, display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', padding: 5, overflow: 'hidden', justifyContent: inAlbums.length >= maxAlbumLinesAllowed ? 'center' : 'flex-start' }}>
+            {inAlbums.slice(0, maxAlbumLinesAllowed).map((title, i) => <Text key={i} style={{
+              fontFamily: 'Quicksand-SemiBold',
+              fontSize: 10,
+              lineHeight: 12,
+              textAlign: 'center',
+              backgroundColor: '#3BB4C3',
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              marginBottom: 6,
+              width: '100%',
+              overflow: 'hidden',
+              borderRadius: 12,
+              // We onlt want to clip te list of albums if they reach the top (to accomodate space for te favorited/deleted icons on the top right) and if we clip, we want to clip ALL albums so the styles match all the way down. if there's not enough albums to reach the top or near the icon, don't clip 
+            color: 'white',
+            maxWidth: (inAlbums.length >= (maxAlbumLinesAllowed - 2)) ? (SCREEN.width - 16 - 48) : '100%'  }} numberOfLines={1} ellipsizeMode={'tail'} >{(i + 1) === maxAlbumLinesAllowed ? `+${inAlbums.length - i} more` : title}</Text>)}
+          </View> : null}
+
        
       </ScrollView>
   );
@@ -386,14 +498,15 @@ const styles = StyleSheet.create({
     width: SCREEN.width,
     // paddingTop: contentPaddingTopScreen / 2,
     height: SCREEN.height,
-    alignSelf: 'center'
+    alignSelf: 'center',
+    marginTop: -80
   },
   scrollViewContentContainer: {
     flex: 1,
     position: 'relative',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
     // paddingHorizontal: '6%'
     // height: SCREEN_BEF.height,
 

@@ -6,13 +6,34 @@
  *
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 
 import { Dimensions } from "../@types";
 
 const useImageIndexChange = (imageIndex: number, screen: Dimensions, onImageIndexWillChange: (nextIndex: number) => void ) => {
   const [currentImageIndex, setImageIndex] = useState(imageIndex);
+
+
+  const refIsLoaded = useRef(false);
+  useEffect(() => {
+
+    if (refIsLoaded.current) {
+      setImageIndex(imageIndex);
+      
+    }
+    
+    // if (imageIndex)
+    refIsLoaded.current = true;
+    
+    
+
+    
+  }, [imageIndex])
+
+  
+  
+
 
   const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const {

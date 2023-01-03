@@ -69,7 +69,9 @@ const ImageViewing = React.forwardRef(({
   HeaderComponent,
   FooterComponent,
   assetsActionedDeleted,
-  assetsActionedFavorited
+  assetsActionedFavorited,
+  assetsActionedHidden,
+  assetsActionedAlbums
 }: Props, ref) => {
   const imageList = React.createRef<VirtualizedList<ImageSource>>();
   const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
@@ -119,6 +121,8 @@ const ImageViewing = React.forwardRef(({
   //   return null;
   // }
 
+  console.log('[image viewing]', {currentImageIndex})
+
   
 
   return (
@@ -135,11 +139,10 @@ const ImageViewing = React.forwardRef(({
       {children}
       <View style={[styles.container, { opacity, backgroundColor }]}>
         <Animated.View style={[styles.header]}>
+          {/* // [06/09/22]: Had to remove 'React.createElement' stuff since it was causing a flicker on icons etc when sliding */}
           {typeof HeaderComponent !== "undefined" && isFullscreen === false
             ? (
-              React.createElement(HeaderComponent, {
-                imageIndex: currentImageIndex,
-              })
+              HeaderComponent
             )
             : (
               <ImageDefaultHeader onRequestClose={onRequestCloseEnhanced} />
@@ -167,7 +170,9 @@ const ImageViewing = React.forwardRef(({
             currentImageIndex,
             imageIndex,
             assetsActionedDeleted,
-            assetsActionedFavorited
+            assetsActionedFavorited,
+            assetsActionedAlbums,
+            assetsActionedHidden
           }}
           renderItem={({ item: imageSrc, index}) => {
             return (
@@ -186,6 +191,8 @@ const ImageViewing = React.forwardRef(({
                 doubleTapToZoomEnabled={doubleTapToZoomEnabled}
                 assetsActionedDeleted={assetsActionedDeleted}
                 assetsActionedFavorited={assetsActionedFavorited}
+                assetsActionedHidden={assetsActionedHidden}
+                assetsActionedAlbums={assetsActionedAlbums}
               />
             )
           }}
@@ -198,9 +205,7 @@ const ImageViewing = React.forwardRef(({
           <Animated.View
             style={[styles.footer]}
           >
-            {React.createElement(FooterComponent, {
-              imageIndex: currentImageIndex,
-            })}
+            {FooterComponent}
           </Animated.View>
         )}
       </View>
