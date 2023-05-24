@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "copy": "cp -rf ./dist ../Photosweep/node_modules/react-native-image-viewing",
     "postversion": "yarn build"
   },
   "peerDependencies": {

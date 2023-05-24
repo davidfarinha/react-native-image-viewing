@@ -10,7 +10,7 @@
 // TODO: [DEF]: [22/12/21]: Implement the same for android
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import ImageResizeMode from 'react-native/Libraries/Image/ImageResizeMode'
 import {
   Animated,
   Dimensions,
@@ -45,7 +45,7 @@ const SCREEN_BEF = Dimensions.get("screen");
 // const contentPaddingTopScreen = 220;
 
 
-const SCREEN = {width: SCREEN_BEF.width, height: SCREEN_BEF.height - 310 };
+
 
 
 // const AnimatedVideoPlayer = Animated.createAnimatedComponent(VideoPlayer)
@@ -60,26 +60,60 @@ type Props = {
   doubleTapToZoomEnabled?: boolean;
 };
 
-const borderRadius = 18;
+const borderRadius = 12;
 
 const ImageItem = ({
   imageSrc,
   onZoom,
   onRequestClose,
-  
+  rowRefs,
   onLongPress,
   delayLongPress,
   index,
   isFullscreen,
   isCurrentImage,
+  isActionable,
   setIsFullscreen,
   assetsActionedHidden,
   assetsActionedAlbums,
   assetsActionedDeleted,
+  getVideoDurationPretty,
   assetsActionedFavorited,
   swipeToCloseEnabled = true,
   doubleTapToZoomEnabled = imageSrc.mediaType !== 'video',
 }: Props) => {
+
+  // If not actionable, we don't display footer so we can make image height bigger
+  const SCREEN = useMemo(() => ({width: SCREEN_BEF.width, height: isActionable ? SCREEN_BEF.height - 340 : SCREEN_BEF.height - 160 }), [SCREEN_BEF]);
+
+
+
+  const styles = useMemo(() => StyleSheet.create({
+    scrollView: {
+      width: SCREEN.width,
+      // paddingTop: contentPaddingTopScreen / 2,
+      height: SCREEN.height,
+      // alignSelf: 'center',
+      marginTop:  125,
+    },
+    scrollViewContentContainer: {
+      flex: 1,
+      position: 'relative',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center'
+      
+      // paddingHorizontal: '6%'
+      // height: SCREEN_BEF.height,
+
+      // paddingTop: 110,
+      // paddingBottom: 125,
+      
+      
+    },
+  }), [SCREEN, isActionable]);
+
+
   const scrollViewRef = useRef<ScrollView>(null);
   const [loaded, setLoaded] = useState(false);
   const [shouldPlay, setShouldPlay] = useState(false);
@@ -117,6 +151,24 @@ const ImageItem = ({
   //   setShouldPlay(shouldStartPlaying)
     
   // }, [shouldStartPlaying])
+
+  const [, updateState] = React.useState();
+  const forceUpdate = React.useCallback(() => updateState({}), []);
+
+  // useEffect(() => {
+  //   setTimeout(() => {
+  //     forceUpdate();
+
+  //     setTimeout(() => {
+  //       forceUpdate();
+
+  //       setTimeout(() => {
+  //         forceUpdate();
+  //       }, 200)
+  //     }, 200)
+  //   }, 200)
+    
+  // }, [imageSrc, imageDimensions])
 
   useEffect(() => {
     setShouldPlay(shouldStartPlaying)
@@ -196,21 +248,23 @@ const ImageItem = ({
   const isActionedFavorited = useMemo(() => imageSrc.isFavorite || assetsActionedFavorited?.has(imageSrc?.localIdentifier), [assetsActionedFavorited, imageSrc])
   const isActionedHidden = useMemo(() => imageSrc.isHidden || assetsActionedHidden?.has(imageSrc?.localIdentifier), [assetsActionedHidden, imageSrc]);
   const inAlbums = useMemo(() => {
-    return Object.keys(assetsActionedAlbums).reduce((prev, currentKey) => {
+    // we need rowRefs, that has the most accurate data, esepcially when image expanding without first navigating ot the sweep screen when actioned state might not be initialzed yert. If we don't have rowRefs, use actioned state
+    return rowRefs ? rowRefs[imageSrc?.localIdentifier]?.inAlbums : Object.keys(assetsActionedAlbums).reduce((prev, currentKey) => {
 
       const currentAlbum = assetsActionedAlbums[currentKey];
-
+  
       
-
-      if (currentAlbum?.has(imageSrc?.localIdentifier) || (imageSrc.inAlbums?.indexOf?.(currentKey) > -1)) {
+  
+      if (currentAlbum?.has(imageSrc?.localIdentifier)) {
         
         prev.push(currentKey)
       }
       return prev;
     }, []);
-  }, [assetsActionedAlbums, imageSrc]);
+  }, [rowRefs, assetsActionedAlbums])
 
   
+
 
   // hook uses min, either width or height scale. but we need to calculate just the height scale again so we can determine how far from the bottom of teh screen to start rendering the 
   // inAlbums list. Which renders outside the container with scale applied (since the parent scale fucks up the text size of inAlbums). So have to recreate the height from bottom of the main
@@ -248,7 +302,7 @@ const ImageItem = ({
     position: 'absolute',
 
     zIndex: 999,
-		height: 38,
+		height: 36,
     width: 40
   }} />, []);
 
@@ -265,15 +319,50 @@ const ImageItem = ({
 
   const maxAlbumLinesAllowed = 12
 
-  // let uri = `ph://${currentImage?.localIdentifier}`;
+  const refPrevIsPlaying = useRef(0);
+  const [shouldHideInAlbumsTiles, setShouldHideInAlbumsTiles] = useState(false);
 
-  if (isCurrentImage) {
-    console.log('[uri]', { loaded, isCurrentImage, index, shouldPlay});
-    
-  }
+  const [containerDimensions, setContainerDimensions] = useState(undefined);
+  const [imageContainerDimensions, setImageContainerDimensions] = useState(undefined);
+  // const [photoContainer, setPhotoContainer] = useState({
+  //   width: undefined,
+  //   height: undefined
+  // });
 	
 
-  // console.log('photosUri', scale, imagesStyles?.height, imagesStyles?.width);
+  useEffect(() => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        x: 1,
+        animated: true
+      })
+
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: 0,
+          animated: true
+        })
+
+        setTimeout(() => {
+          forceUpdate();
+        }, 0)
+      }, 60)
+
+      
+    }, 1)
+    
+    
+  }, [])
+
+
+
+  // Calculate 'contain' resizeMode for <Image manually as we can't apply borderradius with contain resize mode and has the spacing/background issue
+  const imageAspectRatio = imagesStyles.width / imagesStyles.height;
+  // Since aspectRatio style applied to image container breaks with centered height, we need to manually calculate the remainig height and /2 and apply margin for vertically centering plus aspectRatio
+  const imageHeightRemaining = !containerDimensions?.width || !imageContainerDimensions?.width ? 0 :  (containerDimensions?.height - imageContainerDimensions.height);
+
+
+  console.log('[render]111', {imageAspectRatio,imageHeightRemaining, containerDimensions, imagesStyles, imageDimensions, translateValue, scaleValue });
   
 
   // [20/07/22]: HAVING ISSUES WITH EXPO-VIDEO/EXPO-AV. If you swipe 18 videos forwards, it stop loading. switchign to rnvideo instead
@@ -297,11 +386,24 @@ const ImageItem = ({
         {isActionedHidden ? renderedHiddenContent : null}
         {isActionedDeleted ? renderedDeletedContent : isActionedFavorited && renderedFavoritedContent}
         
-        {(!loaded || !imageDimensions) && <ImageLoading />}
+        {(!loaded || !imageDimensions) && <ImageLoading  />}
         
-          <View style={{ height: '100%', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+          <View style={{ height: '100%', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', ...(imagesStyles.width && imageSrc.mediaType === 'image' ? {  paddingTop: imageHeightRemaining / 2 } : {  })  }} onLayout={(e) => {
+            
+            setContainerDimensions(e.nativeEvent.layout);
+
+            // if (!containerDimensions) {
+            //   setContainerDimensions(e.nativeEvent.layout);
+            // } else if (e.nativeEvent.layout.height !== containerDimensions?.height || e.nativeEvent.layout.width !== containerDimensions?.width) {
            
-          <Animated.View style={{ flex: 1, position: 'relative', height: (imagesStyles?.height || 1)  * (scale || 1), width: (imagesStyles?.width || 1) * (scale || 1)}}>
+            //   setContainerDimensions(e.nativeEvent.layout);
+            // }
+            
+            
+          }}>
+           
+          <Animated.View  style={{ flex: 1, ...(imagesStyles.width && imageSrc.mediaType === 'image' ? {  } : {  }) , position: 'relative', opacity: !imagesStyles?.height ? 0 : 1, height: (imagesStyles?.height || 1)  * (scale || 1), width: (imagesStyles?.width || 1) * (scale || 1), shadowOpacity: 1, shadowColor: 'white'}} >
+            <View style={{  ...(imagesStyles.width && imageSrc.mediaType === 'image' ? {  aspectRatio: (imagesStyles.width / imagesStyles.height) } : { flex: 1 }) ,   }} >
           {/* <Animated.View style={{ flex: 1, position: 'relative', height: 200, width: 200}}> */}
           
             {/* <TouchableWithoutFeedback
@@ -313,13 +415,38 @@ const ImageItem = ({
               }}
             >
               <Animated.View style={{flex: 1}}> */}
+              {/* <Animated.View style={{flex: 1, position: 'relative'}}> */}
+              {/* {imageSrc.mediaType === 'video' && <Text style={{
+                position: 'absolute',
+                left: 6,
+                top: 6,
+                zIndex: 99,
+                fontFamily: 'Quicksand-Medium',
+                fontWeight: 'bold',
+                fontSize: 16,
+                color: 'white'
+              }}>{getVideoDurationPretty(imageSrc)}</Text>} */}
               {imageSrc.mediaType === 'video' ?
                 <RNVideo
+
                 controls
 
                 paused={!shouldPlay}
                 repeat
-                
+                onPlaybackRateChange={(event) => {
+                  
+                  if (refPrevIsPlaying.current === 0 && event.playbackRate >= 1) {
+                    console.log('[onPlaybackRateChange] - setShouldHideInAlbumsTiles(false)', event.playbackRate, refPrevIsPlaying.current);
+                    setShouldHideInAlbumsTiles(true);
+                  } else if (shouldHideInAlbumsTiles === true) {
+                    console.log('[onPlaybackRateChange] - setShouldHideInAlbumsTiles(true)', event.playbackRate, refPrevIsPlaying.current);
+                    setShouldHideInAlbumsTiles(false);
+                  }
+                  refPrevIsPlaying.current = event.playbackRate;
+                }}
+        //         onProgress={(data) => {
+				// 	console.log(data.currentTime);
+				// }}
                 source={{
                     // ...imageSrc, 
                     uri: uri
@@ -356,16 +483,23 @@ const ImageItem = ({
                 }}
                 resizeMode={"contain"}
                 posterResizeMode={"contain"}
+                
                 style={{
                   // height: isFullscreen ? Dimensions.get('window').height : '100%',
                   // width: isFullscreen ? Dimensions.get('window').width : '100%',
                   height: '100%',
                   width: '100%',
                   borderRadius,
-                  flex: 1
+                  
+                  flex: 1,
+                  // Fixing weird black border issue with RNVideo [https://github.com/react-native-video/react-native-video/issues/1638#issuecomment-697368222]
+                  borderBottomWidth: 1,
+                  borderBottomColor: 'transparent',
+                  // borderWidth: 0
                   
                 }}
             /> 
+            
               //  <Video
                
               //  defaultControlsVisible={false}
@@ -388,6 +522,7 @@ const ImageItem = ({
               //     })
               //   },
               //   inFullscreen: isFullscreen,
+          
               // }}
               
             //   resizeMode={"contain"}
@@ -401,6 +536,9 @@ const ImageItem = ({
             //   shouldPlay={shouldPlay}
             //   controls={false}
             //   onLoad={() => setLoaded(true)}
+
+
+            
             //     source={{
             //       uri: uri
             //     }}
@@ -413,32 +551,49 @@ const ImageItem = ({
             //     }}
                 
             // />
-            
-                  : 
-                  
+                  : !!imagesStyles.height &&
                     <Image
                       source={{  uri: `ph://${imageSrc.localIdentifier}`}}
+                      onLayout={(e) => {
+                        
+
+                        setImageContainerDimensions(e.nativeEvent.layout)
+                      }}
                       style={{
+                        // flex: 1,
+                        // height: imageHeightContain,
+                        // width: imageWidthContain,
                         height: '100%',
                         width: '100%',
-                        borderRadius
+                        
+                        
+                        borderRadius,
+                        // backgroundColor: 'black',
+                        // flex: 1 
+                        
+                        
                       }}
+                      // Using contain here causes images to be blurry on iOS. tried many things including wrapping it in a view, manually calculating height/width etc but didn't work
+
+                      // stretch to try and ficx bluty image
+                      resizeMode={'stretch'}
                       onLoad={() => setLoaded(true)}
                     />}
+                    
                      
-                  {/* </Animated.View>
-              </TouchableWithoutFeedback>    */}
-                {inAlbums?.length ? <>
-                  <View style={{
-                    backgroundColor: '#3BB4C3',
-                    opacity: 0.3,
-                    ...StyleSheet.absoluteFillObject,
-                    borderRadius,
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }} />
+                {
+                // inAlbums?.length ? <>
+                //   <View style={{
+                //     backgroundColor: '#3BB4C3',
+                //     opacity: 0.3,
+                //     ...StyleSheet.absoluteFillObject,
+                //     borderRadius,
+                //     justifyContent: 'center',
+                //     alignItems: 'center'
+                //   }} /> 
 
-                </> : isActionedDeleted ? <>
+                // </> :
+                isActionedDeleted ? <>
                   <View style={{
                     backgroundColor: '#141414',
                     opacity: 0.35,
@@ -449,7 +604,7 @@ const ImageItem = ({
                   }} />
                 </> : isActionedFavorited ? <>
                   <View style={{
-                     backgroundColor: '#2D78E7',
+                     backgroundColor: '#447FD9',
                      opacity: 0.35,
                      justifyContent: 'center',
                      alignItems: 'center',
@@ -463,58 +618,43 @@ const ImageItem = ({
                     backgroundColor: '#141414',
                     opacity: 0.20,
                     ...StyleSheet.absoluteFillObject,
-                    borderRadius,
+                    borderRadius, 
                     justifyContent: 'center',
                     alignItems: 'center'
                   }} />
                 </> : null}
-          </Animated.View>
-        </View>
-        {inAlbums?.length ? <View style={{ position: 'absolute', bottom: (actualImagePxFromBottom / 2) + 6, display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', padding: 5, overflow: 'hidden', justifyContent: inAlbums.length >= maxAlbumLinesAllowed ? 'center' : 'flex-start' }}>
+
+                 {/* {inAlbums?.length ? <View style={{ position: 'absolute', bottom: (actualImagePxFromBottom / 2) + 6, display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', padding: 5, overflow: 'hidden', justifyContent: inAlbums.length >= maxAlbumLinesAllowed ? 'center' : 'flex-start' }}> */}
+                 {/* // NEEDS POINTEREVENTS = NONE! or else videos with album tiles cannot be controlled. All buttons are unusable */}
+        {/* {(inAlbums?.length && shouldHideInAlbumsTiles === false) ? */}
+        {(inAlbums?.length && imageSrc.mediaType !== 'video') ?
+        <View  pointerEvents="none" style={{ position: 'absolute',
+        borderRadius: 12,
+        // make album appear ontop of delete/favourite overlays
+        zIndex: 999,
+        bottom: 0, left: 0, height: '100%', width: '100%', display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', overflow: 'hidden', justifyContent: inAlbums.length >= maxAlbumLinesAllowed ? 'center' : 'flex-start' }}>
             {inAlbums.slice(0, maxAlbumLinesAllowed).map((title, i) => <Text key={i} style={{
               fontFamily: 'Quicksand-SemiBold',
               fontSize: 10,
               lineHeight: 12,
-              textAlign: 'center',
-              backgroundColor: '#3BB4C3',
+              // textAlign: 'center',
+              backgroundColor: 'rgba(59,180,195,0.69)',
               paddingHorizontal: 12,
               paddingVertical: 4,
-              marginBottom: 6,
+              // marginBottom: 6,
               width: '100%',
               overflow: 'hidden',
-              borderRadius: 12,
               // We onlt want to clip te list of albums if they reach the top (to accomodate space for te favorited/deleted icons on the top right) and if we clip, we want to clip ALL albums so the styles match all the way down. if there's not enough albums to reach the top or near the icon, don't clip 
             color: 'white',
             maxWidth: (inAlbums.length >= (maxAlbumLinesAllowed - 2)) ? (SCREEN.width - 16 - 48) : '100%'  }} numberOfLines={1} ellipsizeMode={'tail'} >{(i + 1) === maxAlbumLinesAllowed ? `+${inAlbums.length - i} more` : title}</Text>)}
           </View> : null}
-
+          </View>
+          </Animated.View>
+        </View>
+       
        
       </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollView: {
-    width: SCREEN.width,
-    // paddingTop: contentPaddingTopScreen / 2,
-    height: SCREEN.height,
-    alignSelf: 'center',
-    marginTop: -80
-  },
-  scrollViewContentContainer: {
-    flex: 1,
-    position: 'relative',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    // paddingHorizontal: '6%'
-    // height: SCREEN_BEF.height,
-
-    // paddingTop: 110,
-    // paddingBottom: 125,
-    
-    
-  },
-});
 
 export default React.memo(ImageItem);

@@ -35,6 +35,7 @@ type Props = {
   onLongPress?: (image: ImageSource) => void;
   onImageIndexChange?: (imageIndex: number) => void;
   presentationStyle?: ModalProps["presentationStyle"];
+  isActionable?: boolean;
   animationType?: ModalProps["animationType"];
   backgroundColor?: string;
   swipeToCloseEnabled?: boolean;
@@ -59,6 +60,8 @@ const ImageViewing = React.forwardRef(({
   onRequestClose,
   onLongPress = () => {},
   onImageIndexChange,
+  isActionable,
+  rowRefs,
   onImageIndexWillChange,
   animationType = DEFAULT_ANIMATION_TYPE,
   backgroundColor = DEFAULT_BG_COLOR,
@@ -67,6 +70,7 @@ const ImageViewing = React.forwardRef(({
   doubleTapToZoomEnabled,
   delayLongPress = DEFAULT_DELAY_LONG_PRESS,
   HeaderComponent,
+  getVideoDurationPretty,
   FooterComponent,
   assetsActionedDeleted,
   assetsActionedFavorited,
@@ -95,6 +99,7 @@ const ImageViewing = React.forwardRef(({
   }))
 
 
+
   useEffect(() => {
       if (onImageIndexChange) {
         onImageIndexChange(currentImageIndex);
@@ -111,6 +116,19 @@ const ImageViewing = React.forwardRef(({
   );
 
 
+  // useEffect(() => {
+  //   setTimeout(() => {
+      
+  //     imageList.current?.scrollToOffset({ animated: true, offset: 1 });
+
+  //     setTimeout(() => {
+  //       imageList.current?.scrollToOffset({ animated: true, offset: 0 });
+  //     }, 60)
+  //   }, 1)
+    
+    
+  // }, [])
+
 
 
 
@@ -121,9 +139,7 @@ const ImageViewing = React.forwardRef(({
   //   return null;
   // }
 
-  console.log('[image viewing]', {currentImageIndex})
 
-  
 
   return (
     <Modal
@@ -134,7 +150,9 @@ const ImageViewing = React.forwardRef(({
       onRequestClose={onRequestCloseEnhanced}
       supportedOrientations={["portrait"]}
       hardwareAccelerated
+      
     >
+      {/* <View style={{ left: '50%', borderRightWidth: 1, borderRightColor: 'black', height: 3000, position: 'absolute', bottom: 0, zIndex: 999 }} /> */}
       <StatusBarManager presentationStyle={presentationStyle} />
       {children}
       <View style={[styles.container, { opacity, backgroundColor }]}>
@@ -169,24 +187,29 @@ const ImageViewing = React.forwardRef(({
           extraData={{
             currentImageIndex,
             imageIndex,
+            isActionable,
             assetsActionedDeleted,
             assetsActionedFavorited,
             assetsActionedAlbums,
-            assetsActionedHidden
+            assetsActionedHidden,
+            rowRefs
           }}
           renderItem={({ item: imageSrc, index}) => {
             return (
               <ImageItem
+              getVideoDurationPretty={getVideoDurationPretty}
                 onZoom={onZoom}
                 imageSrc={imageSrc}
                 onRequestClose={onRequestCloseEnhanced}
                 onLongPress={onLongPress}
                 index={index}
                 isFullscreen={isFullscreen}
+                isActionable={isActionable}
                 isCurrentImage={currentImageIndex === index}
                 setIsFullscreen={setIsFullscreen}
                 currentImageSrc={images[currentImageIndex]}
                 delayLongPress={delayLongPress}
+                rowRefs={rowRefs}
                 swipeToCloseEnabled={swipeToCloseEnabled}
                 doubleTapToZoomEnabled={doubleTapToZoomEnabled}
                 assetsActionedDeleted={assetsActionedDeleted}

@@ -71,13 +71,17 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
 
   useEffect(() => {
     getImageDimensions(image).then((dimensions) => {
-      if (!isImageUnmounted) {
+
+      console.log('[getImageDimensions]', {image, dimensions, isImageUnmounted})
+
+      // THIS IS EXPAND TO BLANK BUG
+      // if (!isImageUnmounted) {
         setDimensions(dimensions);
-      }
+      // }
     });
 
     return () => {
-      isImageUnmounted = true;
+      // isImageUnmounted = true;
     };
   }, [image]);
 
