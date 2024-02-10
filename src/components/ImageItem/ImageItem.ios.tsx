@@ -84,24 +84,26 @@ const ImageItem = ({
 }: Props) => {
 
   // If not actionable, we don't display footer so we can make image height bigger
-  const SCREEN = useMemo(() => ({width: SCREEN_BEF.width, height: isActionable ? SCREEN_BEF.height - 340 : SCREEN_BEF.height - 160 }), [SCREEN_BEF]);
+  const SCREEN = {width: SCREEN_BEF.width, height: isActionable ? SCREEN_BEF.height - 340 : SCREEN_BEF.height - 160 };
 
 
 
-  const styles = useMemo(() => StyleSheet.create({
+  const styles = StyleSheet.create({
     scrollView: {
       width: SCREEN.width,
       // paddingTop: contentPaddingTopScreen / 2,
       height: SCREEN.height,
       // alignSelf: 'center',
       marginTop:  125,
+      minHeight: 1
     },
     scrollViewContentContainer: {
       flex: 1,
       position: 'relative',
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      minHeight: 1
       
       // paddingHorizontal: '6%'
       // height: SCREEN_BEF.height,
@@ -111,7 +113,7 @@ const ImageItem = ({
       
       
     },
-  }), [SCREEN, isActionable]);
+  });
 
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -228,10 +230,11 @@ const ImageItem = ({
   const assetLibraryUri = `assets-library://asset/asset.${'MOV'}?id=${appleId}&ext=${'MOV'}`;
 
   const photosUri =  `photos://${imageSrc.localIdentifier}`;
+  const phUri =  `ph://${imageSrc.localIdentifier}`;
 
   let uri = `ph://${imageSrc.localIdentifier}`;
 
-	// console.log('[uri]', uri);
+	console.log('[uri]', {assetLibraryUri, appleId, photosUri});
 
   
 
@@ -331,7 +334,9 @@ const ImageItem = ({
 	
 
   useEffect(() => {
+    forceUpdate();
     setTimeout(() => {
+      forceUpdate();
       scrollViewRef.current?.scrollTo({
         x: 1,
         animated: true
@@ -362,7 +367,7 @@ const ImageItem = ({
   const imageHeightRemaining = !containerDimensions?.width || !imageContainerDimensions?.width ? 0 :  (containerDimensions?.height - imageContainerDimensions.height);
 
 
-  console.log('[render]111', {imageAspectRatio,imageHeightRemaining, containerDimensions, imagesStyles, imageDimensions, translateValue, scaleValue });
+  console.log('[render]111', {assetLibraryUri, photosUri, uri});
   
 
   // [20/07/22]: HAVING ISSUES WITH EXPO-VIDEO/EXPO-AV. If you swipe 18 videos forwards, it stop loading. switchign to rnvideo instead
@@ -449,9 +454,9 @@ const ImageItem = ({
 				// }}
                 source={{
                     // ...imageSrc, 
-                    uri: uri
+                    uri: phUri
                 }}
-                poster={uri}
+                // poster={uri}
                 onLoad={() =>{
                   setLoaded(true)
 

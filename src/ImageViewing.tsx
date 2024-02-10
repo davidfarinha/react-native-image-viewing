@@ -89,6 +89,9 @@ const ImageViewing = React.forwardRef(({
     toggleBarsVisible,
   ] = useAnimatedComponents();
 
+  const [, updateState] = React.useState();
+  const forceUpdate = React.useCallback(() => updateState({}), []);
+
   useImperativeHandle(ref, () => ({
     setImageIndex: (index) => {
       
@@ -97,7 +100,6 @@ const ImageViewing = React.forwardRef(({
       setImageIndex(index);
     }
   }))
-
 
 
   useEffect(() => {
@@ -116,25 +118,29 @@ const ImageViewing = React.forwardRef(({
   );
 
 
-  // useEffect(() => {
-  //   setTimeout(() => {
+  useEffect(() => {
+    setTimeout(() => {
       
-  //     imageList.current?.scrollToOffset({ animated: true, offset: 1 });
+      imageList.current?.scrollToOffset({ animated: true, offset: 1 });
 
-  //     setTimeout(() => {
-  //       imageList.current?.scrollToOffset({ animated: true, offset: 0 });
-  //     }, 60)
-  //   }, 1)
+      setTimeout(() => {
+        imageList.current?.scrollToOffset({ animated: true, offset: 0 });
+      }, 60)
+    }, 1)
     
     
-  // }, [])
+  }, [])
 
 
 
 
-  // useEffect(() => {
-  //   forceUpdate();
-  // }, [currentImageSrc])
+  useEffect(() => {
+    forceUpdate();
+
+    setTimeout(() => {
+      forceUpdate();
+    }, 500)
+  }, [imageIndex])
   // if (!visible) {
   //   return null;
   // }
@@ -168,12 +174,16 @@ const ImageViewing = React.forwardRef(({
         </Animated.View>
         <VirtualizedList
           ref={imageList}
+          contentContainerStyle={{
+            minHeight: 1
+          }}
           data={images}
           horizontal
           pagingEnabled
-          windowSize={2}
-          initialNumToRender={1}
-          maxToRenderPerBatch={1}
+          windowSize={3}
+          // DONT USE THESE! seems to cause only X (windowSize) items to display, scrolling past that shows blank items
+          // initialNumToRender={1}
+          // maxToRenderPerBatch={1}
           showsHorizontalScrollIndicator={false}
           showsVerticalScrollIndicator={false}
           initialScrollIndex={imageIndex}
@@ -194,7 +204,7 @@ const ImageViewing = React.forwardRef(({
             assetsActionedHidden,
             rowRefs
           }}
-          renderItem={({ item: imageSrc, index}) => {
+          renderItem={({ item: imageSrc, index, }) => {
             return (
               <ImageItem
               getVideoDurationPretty={getVideoDurationPretty}
@@ -222,7 +232,9 @@ const ImageViewing = React.forwardRef(({
           onMomentumScrollEnd={onScroll}
           onScrollEndDrag={onScrollEnd}
           //@ts-ignore
-          keyExtractor={(imageSrc, index) => keyExtractor ? keyExtractor(imageSrc, index) : imageSrc._uri || `${imageSrc}`}
+          keyExtractor={(imageSrc, index) => {
+            return keyExtractor ? keyExtractor(imageSrc, index) : imageSrc._uri || `${imageSrc}`;
+          }}
         />
         {typeof FooterComponent !== "undefined" && isFullscreen === false && (
           <Animated.View
